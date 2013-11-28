@@ -60,6 +60,7 @@ public class _Server
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	protected static void initializePlayers() 
 		throws ParserConfigurationException, SAXException, MalformedURLException, IOException, InterruptedException
 	{
