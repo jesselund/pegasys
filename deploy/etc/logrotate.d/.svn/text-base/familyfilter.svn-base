@@ -1,0 +1,13 @@
+/var/log/ff.log
+{
+        rotate 3
+        weekly
+        missingok
+        delaycompress
+        compress
+        copytruncate
+#        postrotate
+#			cd /home/ec2-user/deploy
+#			./ff-start dns
+#        endscript
+}

@@ -1,0 +1,31 @@
+10
+
+dir
+216
+http://localhost/svn/familyfilter/trunk/java/dns/deploy_base/etc
+http://localhost/svn/familyfilter
+
+
+
+2012-12-19T23:03:49.673860Z
+213
+
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+8847c1fc-0354-42c3-939e-7415fd7e286b
+
+logrotate.d
+dir
+
