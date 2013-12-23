@@ -12,6 +12,12 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import junk.Game;
+import junk.Player;
+import junk.Season;
+import junk.Team;
+import junk.Week;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -21,7 +27,8 @@ import org.xml.sax.SAXException;
 public abstract class _Globals 
 {
 	public static final String SPORTSDATA_KEY = "ez6vx43qsas4tzwywp5q7wx4";
-
+	public static final String SPORTSDATA_BASE_URI = "http://api.sportsdatallc.org/nfl-t1";
+	
 	protected static void initializeTeams() 
 			throws ParserConfigurationException, SAXException, MalformedURLException, IOException
 		{
@@ -61,7 +68,7 @@ public abstract class _Globals
 		    			Team t = new Team(id, name, market, DIVISION, CONFERENCE);
 		    			
 		    			// add team to global index
-		    			((ConcurrentHashMap<String, Team>)Index._indexes.get(Index.Name.TeamsByID)).put(id, t);
+		    			((ConcurrentHashMap<String, Team>)_Index._indexes.get(_Index.Name.TeamsByID)).put(id, t);
 		    		}
 		    			
 		    	}
@@ -75,7 +82,7 @@ public abstract class _Globals
 			String url = "http://api.sportsdatallc.org/nfl-t1/teams/@@TEAM@@/roster.xml?api_key=" + _Globals.SPORTSDATA_KEY;
 			System.out.print("Initializing players...");
 			
-			for(Team team : ((ConcurrentHashMap<String, Team>) Index.get(Index.Name.TeamsByID)).values())
+			for(Team team : ((ConcurrentHashMap<String, Team>) _Index.get(_Index.Name.TeamsByID)).values())
 			{
 				// seed the URL
 				URL u = new URL(url.replaceAll("@@TEAM@@", team.getID()));
@@ -107,10 +114,15 @@ public abstract class _Globals
 			    			String full = e.getAttribute("name_full");
 			    			short jersey = Short.parseShort(e.getAttribute("jersey_number"));
 			    			String position = e.getAttribute("position");
+			    			
+			    			// create the player and add the team reference
 			    			Player p = new Player(id, last, first, full, team, jersey, position);
 			    			
+			    			// add the player to their team
+			    			team.add(p);
+			    			
 			    			// populate global indexes
-			    			((ConcurrentHashMap<String, Player>)Index._indexes.get(Index.Name.PlayersByID)).put(id, p);
+			    			((ConcurrentHashMap<String, Player>)_Index._indexes.get(_Index.Name.PlayersByID)).put(id, p);
 			    		}
 			    			
 			    	}
@@ -119,6 +131,7 @@ public abstract class _Globals
 			System.out.println("done");
 		}	
 
+	/*
 	protected static Season initializeSeason(Season.Type type, int year) 
 			throws ParserConfigurationException, SAXException, MalformedURLException, IOException, ParseException, InterruptedException
 		{ 
@@ -162,27 +175,19 @@ public abstract class _Globals
 		    ((ConcurrentHashMap<String, Season>)Index._indexes.get(Index.Name.SeasonsByID)).put(season.getID(), season);
 		    return season;
 		}
-
-	protected static Week initializeWeek(Season season, int number) 
+	*/
+	
+	protected static void initializeWeek(Week week) 
 			throws ParserConfigurationException, SAXException, MalformedURLException, IOException, ParseException, InterruptedException
-		{ System.out.print("Initializing week " + Week.createKey(season, number) + "...");
+		{ 
+			// season string = "PRE" or "PST" or "REG"
+			System.out.print("Initializing week " + week + "...");
 			
-		// constants for parsing and enumeration
+			// constants for parsing and enumeration
 			SimpleDateFormat df = new SimpleDateFormat("yyyy-mm-dd'T'HH:mm:ssX");
 
-			// get or create (and add) the week to the global index
-			Week week = (Week)Index._indexes.get(Index.Name.WeeksByKey).get(Week.createKey(season, number)); 
-			if(week == null)
-			{
-				week = new Week(season, number);
-				((ConcurrentHashMap<String, Week>)Index._indexes.get(Index.Name.WeeksByKey)).put(week.getKey(), week);
-			}
-
 			// process weekly schedule
-			URL url = new URL("http://api.sportsdatallc.org/nfl-t1/" + 
-						String.valueOf(season.getYear()) + "/" + 
-						season.getType().toString() + "/" + 
-						String.valueOf(week.getWeekNumber()) + "/schedule.xml?api_key=" + _Globals.SPORTSDATA_KEY);
+			URL url = new URL("http://api.sportsdatallc.org/nfl-t1/" + week + "/schedule.xml?api_key=" + _Globals.SPORTSDATA_KEY);
 			// mandatory API delay
 			Thread.sleep(1100);
 
@@ -209,23 +214,26 @@ public abstract class _Globals
 		    			String away = e.getAttribute("away");
 		    			
 		    			Date date = df.parse(schedule);
-		    			Team h = (Team)Index._indexes.get(Index.Name.TeamsByID).get(home);
-		    			Team a = (Team)Index._indexes.get(Index.Name.TeamsByID).get(away);
-		    			Game g = new Game(id, h, a, date.getTime(), season, week);
+		    			Team h = (Team)_Index._indexes.get(_Index.Name.TeamsByID).get(home);
+		    			Team a = (Team)_Index._indexes.get(_Index.Name.TeamsByID).get(away);
+		    			Game g = new Game(id, h, a, date.getTime(), week);
+		    			
+		    			// add the game to this week
+		    			week.add(g);
 		    			
 		    			// add the game to the global indexes
-		    			((ConcurrentHashMap<String, Game>)Index._indexes.get(Index.Name.GamesByID)).put(id, g);
-		    			((ConcurrentHashMap<Season, Game>)Index._indexes.get(Index.Name.GamesBySeason)).put(season, g);	    			
+		    			((ConcurrentHashMap<String, Game>)_Index._indexes.get(_Index.Name.GamesByID)).put(id, g);
 		    		}	    			
 		    	}
 		    }
 		    
-		    // add this week to the global indexes
-		    ((ConcurrentHashMap<String, Week>)Index._indexes.get(Index.Name.WeeksByKey)).put(week.getKey(), week);
-			((ConcurrentHashMap<Season, Week>)Index._indexes.get(Index.Name.WeeksBySeason)).put(season, week);	  
-			
+		    // add the week to the global index
+		    ((ConcurrentHashMap<String, Week>)_Index._indexes.get(_Index.Name.WeeksByID)).put(week.getID(), week);
+		    
+		    // add the season to the global index just to be sure it's there
+		    ((ConcurrentHashMap<String, Season>)_Index._indexes.get(_Index.Name.SeasonsByID)).put(week.getSeason().getID(), week.getSeason());
+		    
 			System.out.println("done");
-		    return week;
 		}
 
 }
